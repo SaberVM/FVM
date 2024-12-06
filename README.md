@@ -20,6 +20,10 @@ The FVM is inspired by the CEK machine. It has the following transition rules:
 ```
 `rest[n:]` means `rest` but skipping the first `n`-1 words (for example, `LAM 4 VAR 1 RET`, written `\.1` in De Bruijn notation, skips to directly after the `RET`).
 
+### Development
+
+The FVM implementation here is written as a simple C program, in `main.c` and `main.h`. The executable can be found at `/bin/fvm`, or built with `./build.sh`. `fvm` takes a binary (bytecode) file as a command-line argument. Examples of such files can be found in the `/tests/` directory. These were generated with a quite convenient Python eDSL in `test.py`. Running `python3 test.py` generates and runs the tests. This is a very simple hand-rolled unit test framework, designed for easily constructing FVM bytecode sequences to test. If you're working on the FVM codebase, you can define `DBG` as `1` to get a bunch of helpful debugging output during execution.
+
 ### TODO
 - Right now `VAR n` copies the value from the environment. It really should, if the value is a pointer, clone the referent and push the new pointer. We'd then add another instruction `OWN n` that has the current behavior of `VAR n`, conceptually taking ownership of the value.
 - I intend to change the semantics a little such that the call stack (a conceptual thing pushed to by `APP` and popped from by `RET`; this is really just part of the stack) uses the capture stack instead of saving the whole environment. But I haven't thought enough about how that would affect compiling to the FVM. How easy is it to figure out how which variables the _continuation_ uses? How efficiently can that be calculated without significantly compromising compiler simplicity?
