@@ -1,9 +1,9 @@
 #define LAM 0
 #define APP 1
 #define VAR 2
-#define RET 4
-#define LIT 8
-#define CAP 16
+#define RET 3
+#define LIT 4
+#define CAP 5
 
 struct Closure {
     int f;

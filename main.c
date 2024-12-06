@@ -3,9 +3,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main() {
-    char code[16] = {LAM, 10, CAP, 0, LAM, 4, VAR, 0, RET, RET, LIT, 7, APP, LIT, 9, APP};
-    int code_len = 16;
+#if 0
+#define dbg(s, ...) printf(s, ##__VA_ARGS__)
+#else
+#define dbg(s, ...)
+#endif
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) { // no file given
+        fprintf(stderr, "Usage: fvm my_binary.fvm\n");
+        exit(EXIT_FAILURE);
+    }
+    FILE *file = fopen(argv[1], "rb");
+    if (file == NULL) {
+        fprintf(stderr, "Error: could not open file %s\n", argv[1]);
+        exit(EXIT_FAILURE);
+    }
+    char code[4096];
+    int code_len = fread(code, sizeof(char), sizeof(code), file);
+    fclose(file);
 
     struct Value *value_stack = malloc(4096 * sizeof(struct Value));
     int value_stack_size = 0;
@@ -16,6 +32,20 @@ int main() {
 
     int pc = 0;
     while (pc < code_len) {
+        for (int i = pc; i < code_len; i++) {
+            switch(code[i]) {
+                case LAM: dbg("LAM %d ", code[++i]); break;
+                case APP: dbg("APP "); break;
+                case LIT: dbg("LIT %d ", code[++i]); break;
+                case CAP: dbg("CAP %d ", code[++i]); break;
+                case RET: dbg("RET "); break;
+                case VAR: dbg("VAR %d ", code[++i]); break;
+                default: dbg("%d ", code[i]); break;
+            }
+        }
+        dbg("\n");
+        dbg("pc=%d op=%d\n", pc, code[pc]);
+        print_value_stack(value_stack, value_stack_size);
         switch (code[pc]) {
             case LAM: {
                 char skip = code[pc + 1];
@@ -27,7 +57,7 @@ int main() {
                 memcpy(value_stack[value_stack_size].closure->env, captures, captures_size);
                 value_stack_size++;
                 captures_size = 0;
-                pc += skip;
+                pc += skip + 2;
                 break;
             }
             case CAP: {
@@ -39,7 +69,15 @@ int main() {
             case VAR: {
                 pc++;
                 char index = code[pc++];
-                value_stack[value_stack_size] = env_stack[env_stack_size - index - 1];
+                struct Value old = env_stack[env_stack_size - index - 1];
+                value_stack[value_stack_size] = old;
+                if (value_stack[value_stack_size].type == 0) {
+                    value_stack[value_stack_size].closure = malloc(sizeof(struct Closure));
+                    value_stack[value_stack_size].closure->f = old.closure->f;
+                    value_stack[value_stack_size].closure->env = malloc(sizeof(struct Value) * env_stack_size);
+                    value_stack[value_stack_size].closure->env_size = env_stack_size;
+                    memcpy(value_stack[value_stack_size].closure->env, old.closure->env, env_stack_size);
+                }
                 value_stack_size++;
                 break;
             }
@@ -71,6 +109,7 @@ int main() {
                 memcpy(continuation->env, env_stack, env_stack_size);
                 struct Value arg = value_stack[--value_stack_size];
                 struct Value closure = value_stack[--value_stack_size];
+                dbg("%d\n", continuation->f);
                 value_stack[value_stack_size++] = (struct Value){
                     .type = 0, 
                     .closure = continuation
@@ -92,13 +131,13 @@ int main() {
 
 void print_value_stack(struct Value *value_stack, int value_stack_size) {
     for (int i = value_stack_size - 1; i >= 0; i--) {
-        printf("value_stack[%d]: ", i);
+        dbg("value_stack[%d]: ", i);
         switch (value_stack[i].type) {
             case 0:
-                printf("closure(f=%d)\n", value_stack[i].closure->f);
+                dbg("closure(f=%d)\n", value_stack[i].closure->f);
                 break;
             case 1:
-                printf("%d\n", value_stack[i].integer);
+                dbg("%d\n", value_stack[i].integer);
         }
     }
 }

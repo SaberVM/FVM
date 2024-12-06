@@ -1,0 +1,1 @@
+clang main.c -o bin/fvm
