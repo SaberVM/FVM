@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DBG 0
+#define DBG
 
 #if DBG
 #define dbg(s, ...) printf(s, ##__VA_ARGS__)
@@ -46,7 +46,9 @@ int main(int argc, char *argv[]) {
                 case ARR: dbg("ARR "); break;
                 case GET: dbg("GET "); break;
                 case SET: dbg("SET "); break;
-                case VAL: dbg("VAL %d ", code[++i]); break;
+                case FST: dbg("FST"); break;
+                case SND: dbg("SND"); break;
+                case LET: dbg("LET %d ", code[++i]); break;
                 default: dbg("?%d ", code[i]); break;
             }
         }
@@ -140,11 +142,10 @@ int main(int argc, char *argv[]) {
             case GET: {
                 pc++;
                 int index = value_stack[--value_stack_size].integer; // TODO: type check
-                struct Value arr = value_stack[--value_stack_size];
+                struct Value arr = value_stack[value_stack_size - 1];
                 if (arr.type == 2 && index >= 0 && index < arr.array.size) {
                     struct Value val = arr.array.values[index];
                     value_stack[value_stack_size++] = clone(val, &val);
-                    value_stack[value_stack_size++] = arr;
                 } else {
                     fprintf(stderr, "Error: Invalid array access: t=%d, i=%d\n", arr.type, index);
                     exit(EXIT_FAILURE);
@@ -165,11 +166,21 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             }
-            case VAL: {
+            case FST: {
+                pc++;
+                value_stack_size--;
+                break;
+            }
+            case SND: {
+                pc++;
+                value_stack[value_stack_size - 2] = value_stack[value_stack_size - 1];
+                value_stack_size--;
+                break;
+            }
+            case LET: {
                 pc++;
                 char index = code[pc++];
-                value_stack[value_stack_size] = value_stack[value_stack_size - index - 1];
-                value_stack_size++;
+                env_stack[env_stack_size++] = value_stack[value_stack_size-- - index - 1];
                 break;
             }
         }

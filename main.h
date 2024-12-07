@@ -8,7 +8,9 @@
 #define ARR 7
 #define GET 8
 #define SET 9
-#define VAL 10
+#define FST 10
+#define SND 11
+#define LET 12
 
 struct Value {
     int type;

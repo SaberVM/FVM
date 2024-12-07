@@ -18,10 +18,22 @@ The FVM is inspired by the CEK machine. It has the following transition rules:
 |APP rest; v,closure(f_code,f_env),vals; env; captures| ~> |f_code; closure(rest,captures),vals; v,f_env; -|
 |RET rest; v,closure(k_code,k_env),vals; env; captures| ~> |k_code; v,vals; k_env; -|
 |CAP n rest; vals; env; captures| ~> |rest; vals; env; env[n],captures|
+|ARR rest; n,vals; env; captures| ~> |rest; array(n),vals; env; captures|
+|GET rest; i,arr,vals; env; captures| ~> |rest; arr[i],arr,vals; env; captures|
+|SET rest; i,arr,v,vals; env; captures| ~> |rest; arr{i:=v},vals; env; captures|
+|FST rest; r,l,vals; env; captures| ~> |rest; l,vals; env; captures|
+|SND rest; r,l,vals; env; captures| ~> |rest; r,vals; env; captures|
+|LET n rest; vals; env; captures| ~> |rest; vals; vals[n],env; n,captures|
 ```
 `rest[n:]` means `rest` but skipping the first `n`-1 words (for example, `LAM 4 VAR 1 RET`, written `\.1` in De Bruijn notation, skips to directly after the `RET`). 
 
 `OWN n` is the same as `VAR n` as you can see here, but it's more efficient and technically unsafe. Namely, it creates a new alias to the same physical memory, while `VAR n` gives a reference to a clone of the memory. In general `OWN n` is for if you know it's your last use of that variable, though I suspect there are some cases where even that can lead to a use-after-free, so use it sparingly until I can produce a comprehensive writeup on when exactly it's safe. When in doubt use `VAR n`, and know that the transition rules above are the formal spec, so we reserve the right to change `OWN n`'s behavior to be more aligned with that spec at any time.
+
+`FST` and `SND` may seem a little backwards, because they name the stack values as `r` and then `l`, but this comes from the implementation of the stack as an array with a stack pointer that grows from the left to the right. This comes from the fact that lists in formal notation are written as growing from right to left, the opposite of typical array notation in software engineering. In each setting I use the convention of that setting, leading to this awkward situation here.
+
+There are two strange things about this setting that actually cancel each other out, but deserve discussion. The first is the dual role of the stack as a call stack and a data stack. This means that hosted languages need to make sure there's only one value at the end of a scope, so that the value under it is the place to return to. The second is the presence of `FST` and `SND` instructions. They're actually very comfortable primitives for shrinking the stack until the top is just a return value and a return address. In this approach, instructions like `GET`, which put multiple things on the stack, can be conceptually thought of as putting a *pair* on the stack (conceptually a single value). The fetched array element is on top, so if you want to `SET` it into another array or something it's easy to do. But this allows us to think of the portion of the stack above the continuation as a single value we're constructing, and `FST` and `SND` elegantly extract the value of interest before returning. In my head I also pair (pun unintended) this reasoning with a so-far-informal connection to category theory, where the stack is an object in a cartesian category, and, because of the associativity of the cartesian product, we can equivalently think of pushing two values as pushing a pair (which necessarily supports a "first projection" morphism and "second projection" morphism) or pushing two values individually. It's like an isomorphism between a single-stack view and a stack-of-stacks view (stacks delimited by continuations to return to).
+
+I use `LET n` instead of, say, `VAL n` (a hypothetical instruction that copies the `n`th value to the top of the stack) because the value stack is more of a scratch computation surface, and the the environment stack has better infrastructure for behaving like, well, an environment. That is, if a value is going to be referred to a few times, it should be assigned to a variable and referred to that way. Note that `LET n` doesn't clone the value, which should inform your decision on whether to refer to it with `OWN n` or `VAR n`.
 
 ### Development
 

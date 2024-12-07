@@ -40,7 +40,9 @@ OWN = b(6)
 ARR = b(7)
 GET = b(8)
 SET = b(9)
-VAL = b(10)
+FST = b(10)
+SND = b(11)
+LET = b(12)
 
 def lam(bytes):
     return LAM + b(len(bytes) + 1) + bytes + RET
@@ -60,18 +62,15 @@ def own(n):
 def arr(n):
     return lit(n) + ARR
 
-def val(n):
-    return VAL + b(n)
-
 def let(val, scope):
-    return lam(scope)(val)
+    return val + LET + b(0) + scope
 
 tests = [
     lam(cap(0) + lam(var(1)))(lit(3))(lit(4)) == 3,
     lam(cap(0) + lam(own(1)))(lit(3))(lit(4)) == 3,
     let(lam(var(0)), var(0)(var(0)(lit(3)))) == 3,
     let(lam(own(0)), own(0)(var(0)(lit(3)))) == 3,
-    let(arr(2), var(0).set(0, lit(3)).set(1, lit(4))[1] + val(2) + val(2)) == 4,
+    let(arr(2), var(0).set(0, lit(3)).set(1, lit(4))[1] + SND) == 4,
 ]
 
 for i, test in enumerate(tests):
