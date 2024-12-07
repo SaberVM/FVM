@@ -43,21 +43,23 @@ int main(int argc, char *argv[]) {
                 case RET: dbg("RET "); break;
                 case VAR: dbg("VAR %d ", code[++i]); break;
                 case OWN: dbg("OWN %d ", code[++i]); break;
-                default: dbg("%d ", code[i]); break;
+                case ARR: dbg("ARR "); break;
+                case GET: dbg("GET "); break;
+                case SET: dbg("SET "); break;
+                case VAL: dbg("VAL %d ", code[++i]); break;
+                default: dbg("?%d ", code[i]); break;
             }
         }
         dbg("\n");
-        dbg("pc=%d op=%d\n", pc, code[pc]);
         print_value_stack(value_stack, value_stack_size);
         switch (code[pc]) {
             case LAM: {
                 char skip = code[pc + 1];
                 value_stack[value_stack_size].type = 0;
-                value_stack[value_stack_size].closure = malloc(sizeof(struct Closure));
-                value_stack[value_stack_size].closure->f = pc + 2;
-                value_stack[value_stack_size].closure->env = malloc(sizeof(struct Value) * captures_size);
-                value_stack[value_stack_size].closure->env_size = captures_size;
-                memcpy(value_stack[value_stack_size].closure->env, captures, captures_size);
+                value_stack[value_stack_size].closure.f = pc + 2;
+                value_stack[value_stack_size].closure.env = malloc(sizeof(struct Value) * captures_size);
+                value_stack[value_stack_size].closure.env_size = captures_size;
+                memcpy(value_stack[value_stack_size].closure.env, captures, captures_size);
                 value_stack_size++;
                 captures_size = 0;
                 pc += skip + 2;
@@ -73,25 +75,16 @@ int main(int argc, char *argv[]) {
                 pc++;
                 char index = code[pc++];
                 struct Value old = env_stack[env_stack_size - index - 1];
-                value_stack[value_stack_size] = old;
-                if (value_stack[value_stack_size].type == 0) {
-                    value_stack[value_stack_size].closure = malloc(sizeof(struct Closure));
-                    value_stack[value_stack_size].closure->f = old.closure->f;
-                    value_stack[value_stack_size].closure->env = malloc(sizeof(struct Value) * env_stack_size);
-                    value_stack[value_stack_size].closure->env_size = env_stack_size;
-                    memcpy(value_stack[value_stack_size].closure->env, old.closure->env, env_stack_size);
-                }
-                value_stack_size++;
+                value_stack[value_stack_size++] = clone(old, &old);
                 break;
             }
             case RET: {
                 struct Value val = value_stack[--value_stack_size];
                 struct Value continuation = value_stack[--value_stack_size];
-                pc = continuation.closure->f;
-                env_stack_size = continuation.closure->env_size;
-                memcpy(env_stack, continuation.closure->env, env_stack_size);
-                free(continuation.closure->env);
-                free(continuation.closure);
+                pc = continuation.closure.f;
+                memcpy(env_stack, continuation.closure.env, continuation.closure.env_size);
+                env_stack_size = continuation.closure.env_size;
+                free(continuation.closure.env);
                 value_stack[value_stack_size++] = val;
                 captures_size = 0;
                 break;
@@ -105,34 +98,78 @@ int main(int argc, char *argv[]) {
                 break;
             }
             case APP: {
-                struct Closure *continuation = malloc(sizeof(struct Closure));
-                continuation->f = pc + 1;
-                continuation->env = malloc(sizeof(struct Value) * captures_size);
-                continuation->env_size = captures_size;
-                memcpy(continuation->env, captures, captures_size);
-                captures_size = 0;
                 struct Value arg = value_stack[--value_stack_size];
                 struct Value closure = value_stack[--value_stack_size];
-                dbg("%d\n", continuation->f);
-                value_stack[value_stack_size++] = (struct Value){
+                int old_pc = pc;
+                pc = closure.closure.f;
+                memcpy(env_stack, closure.closure.env, closure.closure.env_size);
+                env_stack_size = closure.closure.env_size;
+                free(closure.closure.env);
+                value_stack[value_stack_size] = (struct Value){
                     .type = 0, 
-                    .closure = continuation
+                    .closure = {
+                        .f = old_pc + 1,
+                        .env = malloc(sizeof(struct Value) * captures_size),
+                        .env_size = captures_size,
+                    }
                 };
-                pc = closure.closure->f;
-                env_stack_size = closure.closure->env_size;
-                memcpy(env_stack, closure.closure->env, env_stack_size);
-                free(closure.closure->env);
-                free(closure.closure);
+                memcpy(value_stack[value_stack_size].closure.env, captures, sizeof(struct Value) * captures_size);
+                value_stack_size++;
+                captures_size = 0;
                 env_stack[env_stack_size++] = arg;
                 break;
             }
             case OWN: {
-                // a version of VAR that doesn't clone the referent
-                // Use with caution!
-                // Conservative static analysis can make sure it's used safely.
                 pc++;
                 char index = code[pc++];
                 value_stack[value_stack_size++] = env_stack[env_stack_size - index - 1];
+                break;
+            }
+            case ARR: {
+                pc++;
+                int size = value_stack[--value_stack_size].integer; // TODO: type check
+                value_stack[value_stack_size++] = (struct Value){
+                    .type = 2,
+                    .array = {
+                        .size = size,
+                        .values = calloc(size, sizeof(struct Value))
+                    }
+                };
+                break;
+            }
+            case GET: {
+                pc++;
+                int index = value_stack[--value_stack_size].integer; // TODO: type check
+                struct Value arr = value_stack[--value_stack_size];
+                if (arr.type == 2 && index >= 0 && index < arr.array.size) {
+                    struct Value val = arr.array.values[index];
+                    value_stack[value_stack_size++] = clone(val, &val);
+                    value_stack[value_stack_size++] = arr;
+                } else {
+                    fprintf(stderr, "Error: Invalid array access: t=%d, i=%d\n", arr.type, index);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            }
+            case SET: {
+                pc++;
+                int index = value_stack[--value_stack_size].integer; // TODO: type check
+                struct Value arr = value_stack[--value_stack_size];
+                struct Value val = value_stack[--value_stack_size];
+                if (arr.type == 2 && index >= 0 && index < arr.array.size) {
+                    arr.array.values[index] = val;
+                    value_stack[value_stack_size++] = arr;
+                } else {
+                    fprintf(stderr, "Error: Invalid array access: t=%d, i=%d, s=%d\n", arr.type, index, arr.array.size);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            }
+            case VAL: {
+                pc++;
+                char index = code[pc++];
+                value_stack[value_stack_size] = value_stack[value_stack_size - index - 1];
+                value_stack_size++;
                 break;
             }
         }
@@ -142,15 +179,37 @@ int main(int argc, char *argv[]) {
     }
 }
 
+struct Value clone(struct Value dest, struct Value *src) {
+    switch (dest.type) {
+        case 0:
+            dest.closure.env = malloc(sizeof(struct Value) * dest.closure.env_size);
+            memcpy(dest.closure.env, src->closure.env, dest.closure.env_size);
+            break;
+        case 1:
+            break;
+        case 2:
+            dest.array.values = malloc(sizeof(struct Value) * dest.array.size);
+            memcpy(dest.array.values, src->array.values, dest.array.size);
+            break;
+    } 
+    return dest;
+}
+
 void print_value_stack(struct Value *value_stack, int value_stack_size) {
     for (int i = value_stack_size - 1; i >= 0; i--) {
         dbg("value_stack[%d]: ", i);
         switch (value_stack[i].type) {
             case 0:
-                dbg("closure(f=%d)\n", value_stack[i].closure->f);
+                dbg("closure(f=%d)\n", value_stack[i].closure.f);
                 break;
             case 1:
                 dbg("%d\n", value_stack[i].integer);
+                break;
+            case 2:
+                dbg("array(size=%d)\n", value_stack[i].array.size);
+                break;
+            default:
+                dbg("unknown(%d)\n", value_stack[i].type);
         }
     }
 }

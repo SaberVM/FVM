@@ -17,7 +17,11 @@ class Bytes:
     __repr__ = __str__
     def __len__(self):
         return len(self.value)
-    def equals(self, expected):
+    def __getitem__(self, i):
+        return self + lit(i) + GET
+    def set(self, i, v):
+        return v + self + lit(i) + SET
+    def __eq__(self, expected):
         test = Test(self.value)
         test.expected = str(expected).encode() + b'\n'
         return test
@@ -33,6 +37,10 @@ RET = b(3)
 LIT = b(4)
 CAP = b(5)
 OWN = b(6)
+ARR = b(7)
+GET = b(8)
+SET = b(9)
+VAL = b(10)
 
 def lam(bytes):
     return LAM + b(len(bytes) + 1) + bytes + RET
@@ -49,14 +57,21 @@ def cap(n):
 def own(n):
     return OWN + b(n)
 
+def arr(n):
+    return lit(n) + ARR
+
+def val(n):
+    return VAL + b(n)
+
 def let(val, scope):
     return lam(scope)(val)
 
 tests = [
-    lam(cap(0) + lam(var(1)))(lit(3))(lit(4)).equals(3),
-    lam(cap(0) + lam(own(1)))(lit(3))(lit(4)).equals(3),
-    let(lam(var(0)), var(0)(var(0)(lit(3)))).equals(3),
-    let(lam(own(0)), own(0)(var(0)(lit(3)))).equals(3),
+    lam(cap(0) + lam(var(1)))(lit(3))(lit(4)) == 3,
+    lam(cap(0) + lam(own(1)))(lit(3))(lit(4)) == 3,
+    let(lam(var(0)), var(0)(var(0)(lit(3)))) == 3,
+    let(lam(own(0)), own(0)(var(0)(lit(3)))) == 3,
+    let(arr(2), var(0).set(0, lit(3)).set(1, lit(4))[1] + val(2) + val(2)) == 4,
 ]
 
 for i, test in enumerate(tests):
