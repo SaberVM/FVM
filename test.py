@@ -32,6 +32,7 @@ VAR = b(2)
 RET = b(3)
 LIT = b(4)
 CAP = b(5)
+OWN = b(6)
 
 def lam(bytes):
     return LAM + b(len(bytes) + 1) + bytes + RET
@@ -45,12 +46,17 @@ def var(n):
 def cap(n):
     return CAP + b(n)
 
+def own(n):
+    return OWN + b(n)
+
 def let(val, scope):
     return lam(scope)(val)
 
 tests = [
     lam(cap(0) + lam(var(1)))(lit(3))(lit(4)).equals(3),
+    lam(cap(0) + lam(own(1)))(lit(3))(lit(4)).equals(3),
     let(lam(var(0)), var(0)(var(0)(lit(3)))).equals(3),
+    let(lam(own(0)), own(0)(var(0)(lit(3)))).equals(3),
 ]
 
 for i, test in enumerate(tests):

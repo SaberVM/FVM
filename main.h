@@ -4,6 +4,7 @@
 #define RET 3
 #define LIT 4
 #define CAP 5
+#define OWN 6
 
 struct Closure {
     int f;

@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
                 case CAP: dbg("CAP %d ", code[++i]); break;
                 case RET: dbg("RET "); break;
                 case VAR: dbg("VAR %d ", code[++i]); break;
+                case OWN: dbg("OWN %d ", code[++i]); break;
                 default: dbg("%d ", code[i]); break;
             }
         }
@@ -123,6 +124,15 @@ int main(int argc, char *argv[]) {
                 free(closure.closure->env);
                 free(closure.closure);
                 env_stack[env_stack_size++] = arg;
+                break;
+            }
+            case OWN: {
+                // a version of VAR that doesn't clone the referent
+                // Use with caution!
+                // Conservative static analysis can make sure it's used safely.
+                pc++;
+                char index = code[pc++];
+                value_stack[value_stack_size++] = env_stack[env_stack_size - index - 1];
                 break;
             }
         }

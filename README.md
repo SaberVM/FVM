@@ -13,19 +13,21 @@ The FVM is inspired by the CEK machine. It has the following transition rules:
 |-; v,vals; env; captures| ~> v
 |LIT n rest; vals; env; captures| ~> |rest; n,vals; env; captures|
 |VAR n rest; vals; env; captures| ~> |rest; env[n],vals; env; captures|
+|OWN n rest; vals; env; captures| ~> |rest; env[n],vals; env; captures|
 |LAM n rest; vals; env; captures| ~> |rest[n:]; closure(rest,captures),vals; env; -|
 |APP rest; v,closure(f_code,f_env),vals; env; captures| ~> |f_code; closure(rest,captures),vals; v,f_env; -|
 |RET rest; v,closure(k_code,k_env),vals; env; captures| ~> |k_code; v,vals; k_env; -|
 |CAP n rest; vals; env; captures| ~> |rest; vals; env; env[n],captures|
 ```
-`rest[n:]` means `rest` but skipping the first `n`-1 words (for example, `LAM 4 VAR 1 RET`, written `\.1` in De Bruijn notation, skips to directly after the `RET`).
+`rest[n:]` means `rest` but skipping the first `n`-1 words (for example, `LAM 4 VAR 1 RET`, written `\.1` in De Bruijn notation, skips to directly after the `RET`). 
+
+`OWN n` is the same as `VAR n` as you can see here, but it's more efficient and technically unsafe. Namely, it creates a new alias to the same physical memory, while `VAR n` gives a reference to a clone of the memory. In general `OWN n` is for if you know it's your last use of that variable, though I suspect there are some cases where even that can lead to a use-after-free, so use it sparingly until I can produce a comprehensive writeup on when exactly it's safe. When in doubt use `VAR n`, and know that the transition rules above are the formal spec, so we reserve the right to change `OWN n`'s behavior to be more aligned with that spec at any time.
 
 ### Development
 
 The FVM implementation here is written as a simple C program, in `main.c` and `main.h`. The executable can be found at `/bin/fvm`, or built with `./build.sh`. `fvm` takes a binary (bytecode) file as a command-line argument. Examples of such files can be found in the `/tests/` directory. These were generated with a quite convenient Python eDSL in `test.py`. Running `python3 test.py` generates and runs the tests. This is a very simple hand-rolled unit test framework, designed for easily constructing FVM bytecode sequences to test. If you're working on the FVM codebase, you can define `DBG` as `1` to get a bunch of helpful debugging output during execution.
 
 ### TODO
-- Right now `VAR n` copies the value from the environment. It really should, if the value is a pointer, clone the referent and push the new pointer. We'd then add another instruction `OWN n` that has the current behavior of `VAR n`, conceptually taking ownership of the value.
 - I intend to change the semantics a little such that the call stack (a conceptual thing pushed to by `APP` and popped from by `RET`; this is really just part of the stack) uses the capture stack instead of saving the whole environment. But I haven't thought enough about how that would affect compiling to the FVM. How easy is it to figure out how which variables the _continuation_ uses? How efficiently can that be calculated without significantly compromising compiler simplicity?
 - The arguments of `LAM` can be calculated by pairing the `LAM`s and `RET`s in a nested way. I'm not going to do this, but it does mean that the user-provided arguments to `LAM` can be statically checked, should an FVM implementation choose to do so. Equivalently we can think of this as checking that no instructions within a lambda abstraction body follow `RET`.
 - Right now, if the bytecode is even slightly malformed it's undefined behavior. That's not really acceptable. In addition to the static analysis mentioned above, FVM implementations should check that the closure popped by `APP` is actually a closure, and halt execution if it isn't, and this behavior should be toggleable by the user so they can get a little more performance by running their own static analysis (Chez Scheme does this).
