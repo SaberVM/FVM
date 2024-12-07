@@ -28,7 +28,9 @@ struct Value {
     };
 };
 
-void free_all(struct Value *env, int env_size);
+int equal(struct Value *a, struct Value *b);
+
+void free_all(struct Value *env, int env_size, struct Value *except);
 
 struct Value clone(struct Value dest, struct Value *src);
 

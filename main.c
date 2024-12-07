@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
                 struct Value val = value_stack[--value_stack_size];
                 struct Value continuation = value_stack[--value_stack_size];
                 pc = continuation.closure.f;
-                free_all(env_stack, env_stack_size);
+                free_all(env_stack, env_stack_size, &val);
                 memcpy(env_stack, continuation.closure.env, continuation.closure.env_size);
                 env_stack_size = continuation.closure.env_size;
                 free(continuation.closure.env);
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
                 struct Value closure = value_stack[--value_stack_size];
                 int old_pc = pc;
                 pc = closure.closure.f;
-                free_all(env_stack, env_stack_size);
+                free_all(env_stack, env_stack_size, &(struct Value){.type = 1, .integer = 0}); // dummy value so everything is freed
                 memcpy(env_stack, closure.closure.env, closure.closure.env_size);
                 env_stack_size = closure.closure.env_size;
                 free(closure.closure.env);
@@ -193,8 +193,19 @@ int main(int argc, char *argv[]) {
     }
 }
 
-void free_all(struct Value *env, int env_size) {
+int equal(struct Value *a, struct Value *b) { // shallow equality
+    if (a->type != b->type) return 0;
+    switch (a->type) {
+        case 0: return a->closure.f == b->closure.f;
+        case 1: return a->integer == b->integer;
+        case 2: return a->array.values == b->array.values;
+    }
+    return 0; // shut up the compiler
+}
+
+void free_all(struct Value *env, int env_size, struct Value *except) {
     for (int i = 0; i < env_size; i++) {
+        if (equal(env + sizeof(struct Value) * i, except)) continue;
         switch (env[i].type) {
             case 0:
                 free(env[i].closure.env);
