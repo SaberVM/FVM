@@ -92,6 +92,7 @@ int main(int argc, char *argv[]) {
                 free(continuation.closure->env);
                 free(continuation.closure);
                 value_stack[value_stack_size++] = val;
+                captures_size = 0;
                 break;
             }
             case LIT: {
@@ -105,10 +106,10 @@ int main(int argc, char *argv[]) {
             case APP: {
                 struct Closure *continuation = malloc(sizeof(struct Closure));
                 continuation->f = pc + 1;
-                // TODO: we should use the captures stack instead of cloning the whole env
-                continuation->env = malloc(sizeof(struct Value) * env_stack_size);
-                continuation->env_size = env_stack_size;
-                memcpy(continuation->env, env_stack, env_stack_size);
+                continuation->env = malloc(sizeof(struct Value) * captures_size);
+                continuation->env_size = captures_size;
+                memcpy(continuation->env, captures, captures_size);
+                captures_size = 0;
                 struct Value arg = value_stack[--value_stack_size];
                 struct Value closure = value_stack[--value_stack_size];
                 dbg("%d\n", continuation->f);

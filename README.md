@@ -14,7 +14,7 @@ The FVM is inspired by the CEK machine. It has the following transition rules:
 |LIT n rest; vals; env; captures| ~> |rest; n,vals; env; captures|
 |VAR n rest; vals; env; captures| ~> |rest; env[n],vals; env; captures|
 |LAM n rest; vals; env; captures| ~> |rest[n:]; closure(rest,captures),vals; env; -|
-|APP rest; v,closure(f_code,f_env),vals; env; captures| ~> |f_code; closure(rest,env),vals; v,f_env; -|
+|APP rest; v,closure(f_code,f_env),vals; env; captures| ~> |f_code; closure(rest,captures),vals; v,f_env; -|
 |RET rest; v,closure(k_code,k_env),vals; env; captures| ~> |k_code; v,vals; k_env; -|
 |CAP n rest; vals; env; captures| ~> |rest; vals; env; env[n],captures|
 ```
