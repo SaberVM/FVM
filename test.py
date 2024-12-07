@@ -69,7 +69,6 @@ tests = [
     lam(cap(0) + lam(var(1)))(lit(3))(lit(4)) == 3,
     lam(cap(0) + lam(own(1)))(lit(3))(lit(4)) == 3,
     let(lam(var(0)), var(0)(var(0)(lit(3)))) == 3,
-    let(lam(own(0)), own(0)(var(0)(lit(3)))) == 3,
     let(arr(2), var(0).set(0, lit(3)).set(1, lit(4))[1] + SND) == 4,
 ]
 

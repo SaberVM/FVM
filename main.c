@@ -70,7 +70,8 @@ int main(int argc, char *argv[]) {
             case CAP: {
                 pc++;
                 char index = code[pc++];
-                captures[captures_size++] = env_stack[env_stack_size - index - 1];
+                struct Value old = env_stack[env_stack_size - index - 1];
+                captures[captures_size++] = clone(old, &old);
                 break;
             }
             case VAR: {
@@ -84,6 +85,7 @@ int main(int argc, char *argv[]) {
                 struct Value val = value_stack[--value_stack_size];
                 struct Value continuation = value_stack[--value_stack_size];
                 pc = continuation.closure.f;
+                free_all(env_stack, env_stack_size);
                 memcpy(env_stack, continuation.closure.env, continuation.closure.env_size);
                 env_stack_size = continuation.closure.env_size;
                 free(continuation.closure.env);
@@ -104,6 +106,7 @@ int main(int argc, char *argv[]) {
                 struct Value closure = value_stack[--value_stack_size];
                 int old_pc = pc;
                 pc = closure.closure.f;
+                free_all(env_stack, env_stack_size);
                 memcpy(env_stack, closure.closure.env, closure.closure.env_size);
                 env_stack_size = closure.closure.env_size;
                 free(closure.closure.env);
@@ -187,6 +190,19 @@ int main(int argc, char *argv[]) {
     }
     if (value_stack[value_stack_size - 1].type == 1) {
         printf("%d\n", value_stack[value_stack_size - 1].integer);
+    }
+}
+
+void free_all(struct Value *env, int env_size) {
+    for (int i = 0; i < env_size; i++) {
+        switch (env[i].type) {
+            case 0:
+                free(env[i].closure.env);
+                break;
+            case 2:
+                free(env[i].array.values);
+                break;
+        }
     }
 }
 

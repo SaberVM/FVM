@@ -28,6 +28,8 @@ struct Value {
     };
 };
 
+void free_all(struct Value *env, int env_size);
+
 struct Value clone(struct Value dest, struct Value *src);
 
 void print_value_stack(struct Value *value_stack, int value_stack_size);
