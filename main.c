@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DBG
+#define DBG 0
 
 #if DBG
 #define dbg(s, ...) printf(s, ##__VA_ARGS__)
