@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
                 case CNT: dbg("CNT %d ", code[++i]); break;
                 case PAR: dbg("PAR %d ", code[++i]); break;
                 case SYS: dbg("SYS %d ", code[++i]); break;
-                default: dbg("?%d ", code[i]); break;
+                default: dbg("?%d ", code[i]);
             }
         }
         dbg("\n");
@@ -228,6 +228,89 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Error: Invalid array access: t=%d\n", arr.type);
                     exit(EXIT_FAILURE);
                 }
+            }
+            case ADD: {
+                pc++;
+                double a = value_stack[--value_stack_size].number;
+                double b = value_stack[--value_stack_size].number;
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = a + b};
+                break;
+            }
+            case SUB: {
+                pc++;
+                double a = value_stack[--value_stack_size].number;
+                double b = value_stack[--value_stack_size].number;
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = a - b};
+                break;
+            }
+            case MUL: {
+                pc++;
+                double a = value_stack[--value_stack_size].number;
+                double b = value_stack[--value_stack_size].number;
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = a * b};
+                break;
+            }
+            case DIV: {
+                pc++;
+                double a = value_stack[--value_stack_size].number;
+                double b = value_stack[--value_stack_size].number;
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = a / b};
+                break;
+            }
+            case MOD: {
+                pc++;
+                double a = value_stack[--value_stack_size].number;
+                double b = value_stack[--value_stack_size].number;
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = fmod(a, b)};
+                break;
+            }
+            case EQL: {
+                pc++;
+                struct Value a = value_stack[--value_stack_size];
+                struct Value b = value_stack[--value_stack_size];
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = (double)equal(&a, &b)};
+                break;
+            }
+            case GRT: {
+                pc++;
+                double a = value_stack[--value_stack_size].number;
+                double b = value_stack[--value_stack_size].number;
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = a > b};
+                break;
+            }
+            case AND: {
+                pc++;
+                double a = value_stack[--value_stack_size].number;
+                double b = value_stack[--value_stack_size].number;
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = a && b};
+                break;
+            }
+            case NOT: {
+                pc++;
+                double a = value_stack[--value_stack_size].number;
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = !a};
+                break;
+            }
+            case JIF: {
+                pc++;
+                char dist = code[pc++];
+                double cond = value_stack[--value_stack_size].number;
+                if (cond) pc += dist;
+            }
+            case REP: {
+                pc++;
+                break;
+            }
+            case BRK: {
+                pc++;
+                char dist = code[pc++];
+                pc += dist;
+                break;
+            }
+            case CNT: {
+                char dist = code[pc + 1];
+                pc -= dist;
+                break;
             }
         }
     }
