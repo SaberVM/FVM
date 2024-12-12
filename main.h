@@ -11,6 +11,7 @@
 #define FST 10
 #define SND 11
 #define LET 12
+#define LEN 13
 
 struct Value {
     int type;

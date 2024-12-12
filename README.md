@@ -24,6 +24,7 @@ The FVM is inspired by the CEK machine. It has the following transition rules:
 |FST rest; r,l,vals; env; captures| ~> |rest; l,vals; env; captures|
 |SND rest; r,l,vals; env; captures| ~> |rest; r,vals; env; captures|
 |LET n rest; vals; env; captures| ~> |rest; vals; vals[n],env; n,captures|
+|LEN rest; arr,vals; env; captures| ~> |rest; arr.length,arr,vals; env; captures|
 ```
 `rest[n:]` means `rest` but skipping the first `n`-1 words (for example, `LAM 4 VAR 1 RET`, written `\.1` in De Bruijn notation, skips to directly after the `RET`). 
 

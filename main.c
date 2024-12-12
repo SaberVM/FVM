@@ -135,7 +135,12 @@ int main(int argc, char *argv[]) {
             }
             case ARR: {
                 pc++;
-                int size = value_stack[--value_stack_size].number; // TODO: type check
+                double param = value_stack[--value_stack_size].number; // TODO: type check
+                if ((int)param < param) {
+                    fprintf(stderr, "Error: Invalid array size: t=%d, i=%d\n", param, param);
+                    exit(EXIT_FAILURE);
+                }
+                int size = (int)param;
                 value_stack[value_stack_size++] = (struct Value){
                     .type = 2,
                     .array = {
@@ -147,7 +152,12 @@ int main(int argc, char *argv[]) {
             }
             case GET: {
                 pc++;
-                int index = value_stack[--value_stack_size].number; // TODO: type check
+                double param = value_stack[--value_stack_size].number; // TODO: type check
+                if ((int)param < param) {
+                    fprintf(stderr, "Error: Invalid array access: t=%d, i=%d\n", param, param);
+                    exit(EXIT_FAILURE);
+                }
+                int index = (int)param;
                 struct Value arr = value_stack[value_stack_size - 1];
                 if (arr.type == 2 && index >= 0 && index < arr.array.size) {
                     struct Value val = arr.array.values[index];
@@ -160,7 +170,12 @@ int main(int argc, char *argv[]) {
             }
             case SET: {
                 pc++;
-                int index = value_stack[--value_stack_size].number; // TODO: type check
+                double param = value_stack[--value_stack_size].number; // TODO: type check
+                if ((int)param < param) {
+                    fprintf(stderr, "Error: Invalid array access: t=%d, i=%d\n", param, param);
+                    exit(EXIT_FAILURE);
+                }
+                int index = (int)param;
                 struct Value arr = value_stack[--value_stack_size];
                 struct Value val = value_stack[--value_stack_size];
                 if (arr.type == 2 && index >= 0 && index < arr.array.size) {
@@ -191,9 +206,9 @@ int main(int argc, char *argv[]) {
             }
             case LEN: {
                 pc++;
-                struct Value arr = value_stack[--value_stack_size];
+                struct Value arr = value_stack[value_stack_size - 1];
                 if (arr.type == 2) {
-                    value_stack[value_stack_size++] = (struct Value){.type = 1, .number = arr.array.size};
+                    value_stack[value_stack_size++] = (struct Value){.type = 1, .number = (double)arr.array.size};
                 } else {
                     fprintf(stderr, "Error: Invalid array access: t=%d\n", arr.type);
                     exit(EXIT_FAILURE);
