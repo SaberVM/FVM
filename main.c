@@ -52,6 +52,21 @@ int main(int argc, char *argv[]) {
                 case SND: dbg("SND"); break;
                 case LET: dbg("LET %d ", code[++i]); break;
                 case LEN: dbg("LEN "); break;
+                case ADD: dbg("ADD "); break;
+                case SUB: dbg("SUB "); break;
+                case MUL: dbg("MUL "); break;
+                case DIV: dbg("DIV "); break;
+                case MOD: dbg("MOD "); break;
+                case EQL: dbg("EQL "); break;
+                case GRT: dbg("GRT "); break;
+                case AND: dbg("AND "); break;
+                case NOT: dbg("NOT "); break;
+                case JIF: dbg("JIF %d ", code[++i]); break;
+                case REP: dbg("REP "); break;
+                case BRK: dbg("BRK %d ", code[++i]); break;
+                case CNT: dbg("CNT %d ", code[++i]); break;
+                case PAR: dbg("PAR %d ", code[++i]); break;
+                case SYS: dbg("SYS %d ", code[++i]); break;
                 default: dbg("?%d ", code[i]); break;
             }
         }

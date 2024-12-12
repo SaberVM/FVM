@@ -12,6 +12,21 @@
 #define SND 11
 #define LET 12
 #define LEN 13
+#define ADD 14
+#define SUB 15
+#define MUL 16
+#define DIV 17
+#define MOD 18
+#define EQL 19
+#define GRT 20
+#define AND 21
+#define NOT 23
+#define JIF 24
+#define REP 25
+#define BRK 26
+#define CNT 27
+#define PAR 28
+#define SYS 29
 
 struct Value {
     int type;
