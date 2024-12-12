@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <float.h>
 
 #define DBG 0
 
@@ -49,6 +51,7 @@ int main(int argc, char *argv[]) {
                 case FST: dbg("FST"); break;
                 case SND: dbg("SND"); break;
                 case LET: dbg("LET %d ", code[++i]); break;
+                case LEN: dbg("LEN "); break;
                 default: dbg("?%d ", code[i]); break;
             }
         }
@@ -97,7 +100,7 @@ int main(int argc, char *argv[]) {
                 pc++;
                 char val = code[pc++];
                 value_stack[value_stack_size].type = 1;
-                value_stack[value_stack_size].integer = val;
+                value_stack[value_stack_size].number = (double)val;
                 value_stack_size++;
                 break;
             }
@@ -106,7 +109,7 @@ int main(int argc, char *argv[]) {
                 struct Value closure = value_stack[--value_stack_size];
                 int old_pc = pc;
                 pc = closure.closure.f;
-                free_all(env_stack, env_stack_size, &(struct Value){.type = 1, .integer = 0}); // dummy value so everything is freed
+                free_all(env_stack, env_stack_size, &(struct Value){.type = 1, .number = 0.0}); // dummy value so everything is freed
                 memcpy(env_stack, closure.closure.env, closure.closure.env_size);
                 env_stack_size = closure.closure.env_size;
                 free(closure.closure.env);
@@ -132,7 +135,7 @@ int main(int argc, char *argv[]) {
             }
             case ARR: {
                 pc++;
-                int size = value_stack[--value_stack_size].integer; // TODO: type check
+                int size = value_stack[--value_stack_size].number; // TODO: type check
                 value_stack[value_stack_size++] = (struct Value){
                     .type = 2,
                     .array = {
@@ -144,7 +147,7 @@ int main(int argc, char *argv[]) {
             }
             case GET: {
                 pc++;
-                int index = value_stack[--value_stack_size].integer; // TODO: type check
+                int index = value_stack[--value_stack_size].number; // TODO: type check
                 struct Value arr = value_stack[value_stack_size - 1];
                 if (arr.type == 2 && index >= 0 && index < arr.array.size) {
                     struct Value val = arr.array.values[index];
@@ -157,7 +160,7 @@ int main(int argc, char *argv[]) {
             }
             case SET: {
                 pc++;
-                int index = value_stack[--value_stack_size].integer; // TODO: type check
+                int index = value_stack[--value_stack_size].number; // TODO: type check
                 struct Value arr = value_stack[--value_stack_size];
                 struct Value val = value_stack[--value_stack_size];
                 if (arr.type == 2 && index >= 0 && index < arr.array.size) {
@@ -186,10 +189,20 @@ int main(int argc, char *argv[]) {
                 env_stack[env_stack_size++] = value_stack[value_stack_size-- - index - 1];
                 break;
             }
+            case LEN: {
+                pc++;
+                struct Value arr = value_stack[--value_stack_size];
+                if (arr.type == 2) {
+                    value_stack[value_stack_size++] = (struct Value){.type = 1, .number = arr.array.size};
+                } else {
+                    fprintf(stderr, "Error: Invalid array access: t=%d\n", arr.type);
+                    exit(EXIT_FAILURE);
+                }
+            }
         }
     }
     if (value_stack[value_stack_size - 1].type == 1) {
-        printf("%d\n", value_stack[value_stack_size - 1].integer);
+        printf("%d\n", value_stack[value_stack_size - 1].number);
     }
 }
 
@@ -197,7 +210,7 @@ int equal(struct Value *a, struct Value *b) { // shallow equality
     if (a->type != b->type) return 0;
     switch (a->type) {
         case 0: return a->closure.f == b->closure.f;
-        case 1: return a->integer == b->integer;
+        case 1: return fabs(a->number - b->number) < DBL_EPSILON * fabgs(a->number + b->number);
         case 2: return a->array.values == b->array.values;
     }
     return 0; // shut up the compiler

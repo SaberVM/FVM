@@ -20,7 +20,7 @@ struct Value {
             struct Value *env;
             int env_size;
         } closure;
-        int integer;
+        double number;
         struct {
             int size;
             struct Value *values;
