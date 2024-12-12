@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
                 pc++;
                 double param = value_stack[--value_stack_size].number; // TODO: type check
                 if ((int)param < param) {
-                    fprintf(stderr, "Error: Invalid array size: t=%d, i=%d\n", param, param);
+                    fprintf(stderr, "Error: Invalid array size: i=%f\n", param);
                     exit(EXIT_FAILURE);
                 }
                 int size = (int)param;
@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
                 pc++;
                 double param = value_stack[--value_stack_size].number; // TODO: type check
                 if ((int)param < param) {
-                    fprintf(stderr, "Error: Invalid array access: t=%d, i=%d\n", param, param);
+                    fprintf(stderr, "Error: Invalid array access: i=%f\n", param);
                     exit(EXIT_FAILURE);
                 }
                 int index = (int)param;
@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
                 pc++;
                 double param = value_stack[--value_stack_size].number; // TODO: type check
                 if ((int)param < param) {
-                    fprintf(stderr, "Error: Invalid array access: t=%d, i=%d\n", param, param);
+                    fprintf(stderr, "Error: Invalid array access: i=%f\n", param);
                     exit(EXIT_FAILURE);
                 }
                 int index = (int)param;
@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
         }
     }
     if (value_stack[value_stack_size - 1].type == 1) {
-        printf("%d\n", value_stack[value_stack_size - 1].number);
+        printf("%.0f\n", value_stack[value_stack_size - 1].number);
     }
 }
 
@@ -225,7 +225,7 @@ int equal(struct Value *a, struct Value *b) { // shallow equality
     if (a->type != b->type) return 0;
     switch (a->type) {
         case 0: return a->closure.f == b->closure.f;
-        case 1: return fabs(a->number - b->number) < DBL_EPSILON * fabgs(a->number + b->number);
+        case 1: return fabs(a->number - b->number) < DBL_EPSILON * fabs(a->number + b->number);
         case 2: return a->array.values == b->array.values;
     }
     return 0; // shut up the compiler
