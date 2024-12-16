@@ -65,8 +65,9 @@ int main(int argc, char *argv[]) {
                 case REP: dbg("REP "); break;
                 case BRK: dbg("BRK %d ", code[++i]); break;
                 case CNT: dbg("CNT %d ", code[++i]); break;
-                case PAR: dbg("PAR %d ", code[++i]); break;
+                case PAR: dbg("PAR %d %d ", code[i + 1], code[i + 2]); i += 2; break;
                 case SYS: dbg("SYS %d ", code[++i]); break;
+                case CUT: dbg("CUT %d ", code[++i]); break;
                 default: dbg("?%d ", code[i]);
             }
         }
@@ -240,7 +241,7 @@ int main(int argc, char *argv[]) {
                 pc++;
                 double a = value_stack[--value_stack_size].number;
                 double b = value_stack[--value_stack_size].number;
-                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = a - b};
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = b - a};
                 break;
             }
             case MUL: {
@@ -254,14 +255,14 @@ int main(int argc, char *argv[]) {
                 pc++;
                 double a = value_stack[--value_stack_size].number;
                 double b = value_stack[--value_stack_size].number;
-                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = a / b};
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = b / a};
                 break;
             }
             case MOD: {
                 pc++;
                 double a = value_stack[--value_stack_size].number;
                 double b = value_stack[--value_stack_size].number;
-                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = fmod(a, b)};
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = fmod(b, a)};
                 break;
             }
             case EQL: {
@@ -275,7 +276,7 @@ int main(int argc, char *argv[]) {
                 pc++;
                 double a = value_stack[--value_stack_size].number;
                 double b = value_stack[--value_stack_size].number;
-                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = a > b};
+                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = b > a};
                 break;
             }
             case AND: {
@@ -287,21 +288,25 @@ int main(int argc, char *argv[]) {
             }
             case NOT: {
                 pc++;
-                double a = value_stack[--value_stack_size].number;
-                value_stack[value_stack_size++] = (struct Value){.type = 1, .number = !a};
+                double x = value_stack[value_stack_size - 1].number;
+                value_stack[value_stack_size - 1].number = !x;
                 break;
             }
             case JIF: {
                 pc++;
-                char dist = code[pc++];
+                char dist = code[pc];
                 double cond = value_stack[--value_stack_size].number;
                 if (cond) pc += dist;
             }
             case REP: {
+                // a no-op; 
+                // static analysis checks that CNT jumps to REP
+                // in a balanced-parentheses kinda way
                 pc++;
                 break;
             }
             case BRK: {
+                // static analysis checks that BRK jumps to CNT
                 pc++;
                 char dist = code[pc++];
                 pc += dist;
@@ -312,10 +317,35 @@ int main(int argc, char *argv[]) {
                 pc -= dist;
                 break;
             }
+            case PAR: {
+                // in advanced implementations,
+                // this would run the next n instructions
+                // concurrently with the following m instructions
+                // like a fork/join
+                // but running them sequentially is semantically valid
+                pc += 3;
+                break;
+            }
+            case SYS: {
+                pc++;
+                char which = code[pc++];
+                switch (which) {
+                    case 0: {
+                        // print
+                        double val = value_stack[--value_stack_size].number;
+                        printf("%.0f\n", val);
+                        break;
+                    }
+                }
+                break;
+            }
+            case CUT: {
+                pc++;
+                char n = code[pc++];
+                env_stack_size -= n;
+                break;
+            }
         }
-    }
-    if (value_stack[value_stack_size - 1].type == 1) {
-        printf("%.0f\n", value_stack[value_stack_size - 1].number);
     }
 }
 
@@ -367,7 +397,7 @@ void print_value_stack(struct Value *value_stack, int value_stack_size) {
                 dbg("closure(f=%d)\n", value_stack[i].closure.f);
                 break;
             case 1:
-                dbg("%d\n", value_stack[i].integer);
+                dbg("%f\n", value_stack[i].number);
                 break;
             case 2:
                 dbg("array(size=%d)\n", value_stack[i].array.size);

@@ -27,6 +27,7 @@
 #define CNT 27
 #define PAR 28
 #define SYS 29
+#define CUT 30
 
 struct Value {
     int type;
