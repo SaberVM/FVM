@@ -47,8 +47,12 @@ struct Value {
 
 int equal(struct Value *a, struct Value *b);
 
-void free_all(struct Value *env, int env_size, struct Value *except);
+void free_all(struct Value *env, int env_size);
 
-struct Value clone(struct Value dest, struct Value *src);
+void free_all_except(struct Value *env, int env_size, struct Value *except);
+
+void clone(struct Value *dest, struct Value *src);
 
 void print_value_stack(struct Value *value_stack, int value_stack_size);
+
+void print_value(struct Value *value);
